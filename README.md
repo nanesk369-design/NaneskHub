@@ -1,2 +1,0 @@
-# NaneskHub
-opennaneskgui
