@@ -1,4 +1,4 @@
--- [[ NANESK HUB - ADVANCED EDITION v1.2.2 ]]
+-- [[ NANESK HUB - ADVANCED EDITION v1.2.3 ]]
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInput = game:GetService("UserInputService")
@@ -12,7 +12,7 @@ local VirtualUser = game:GetService("VirtualUser")
 
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 local Camera = workspace.CurrentCamera
-local SCRIPT_VERSION = "1.2.2"
+local SCRIPT_VERSION = "1.2.3"
 local CONFIG_FILE = "NaneskHub_Config.json"
 local DISCORD_LINK = "https://discord.gg/MtwrSz9fW"
 
@@ -238,11 +238,19 @@ CopyScriptBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+-- Cập nhật bảng thông tin: Bổ sung Key Checking, Level, Features
 local function ShowScriptInfo(item)
     local title = item.title or "Unknown"
     local code = item.code or item.script or ""
     local srcName = item.source or "API"
-    InfoText.Text = string.format("📌 Title: %s\n🌐 Source: [%s]\n\n📜 Raw Code:\n%s", title, srcName, code)
+    local keyStatus = item.key or "🔓 Keyless"
+    local levelInfo = item.level or "FREE"
+    local featuresInfo = item.features or "Không có danh sách tính năng"
+
+    InfoText.Text = string.format(
+        "📌 Title: %s\n🌐 Source: [%s]\n🔑 Key System: %s\n📊 Level/Type: %s\n\n⚡ Features:\n%s\n\n📜 Raw Code:\n%s",
+        title, srcName, keyStatus, levelInfo, featuresInfo, code
+    )
     viewingCode = code
     SideInfoFrame.Visible = true
     task.defer(function() InfoScroll.CanvasSize = UDim2.new(0, 0, 0, InfoText.TextBounds.Y + 30) end)
@@ -469,8 +477,27 @@ local function runLibrarySearch()
                     local list = data.result.scripts or data.result.docs or {}
                     for _, scr in ipairs(list) do
                         if (scr.script or scr.code) and scr.title then
+                            -- Trích xuất Key Checking, Level và Features từ API ScriptBlox
+                            local keyStatus = (scr.key == true) and "🔑 Requires Key" or ((scr.key == false) and "🔓 Keyless" or "❓ Unknown")
+                            local levelType = (scr.scriptType and string.upper(scr.scriptType) or "FREE")
+                            if scr.isUniversal then levelType = levelType .. " | Universal" end
+
+                            local featuresText = "N/A"
+                            if type(scr.features) == "string" and scr.features ~= "" then
+                                featuresText = scr.features
+                            elseif type(scr.features) == "table" then
+                                featuresText = table.concat(scr.features, ", ")
+                            elseif type(scr.description) == "string" and scr.description ~= "" then
+                                featuresText = scr.description
+                            end
+
                             createScriptCard(LibraryScroll, {
-                                title = scr.title, source = "ScriptBlox", code = scr.script or scr.code
+                                title = scr.title,
+                                source = "ScriptBlox",
+                                code = scr.script or scr.code,
+                                key = keyStatus,
+                                level = levelType,
+                                features = featuresText
                             })
                             totalFound = totalFound + 1
                         end
@@ -554,7 +581,6 @@ local isSkywalkActive = false
 addSliderRow(PlayersScroll, "⚡ Walk Speed", 16, 500, 16, function(val) customSpeed = val end)
 addSliderRow(PlayersScroll, "🦘 Jump Power", 50, 500, 50, function(val) customJump = val end)
 
--- Nâng nhân vật tự động khi điều chỉnh Skywalk Offset Y
 addSliderRow(PlayersScroll, "☁️ Skywalk Offset Y", -20, 100, 0, function(val)
     local delta = val - lastSkywalkOffset
     lastSkywalkOffset = val
@@ -650,7 +676,7 @@ addToggleBtn(PlayersScroll, "👻 Noclip", false, function(enabled)
     elseif noclipConn then noclipConn:Disconnect() end
 end)
 
--- Skywalk Đồng Bộ Nhân Vật & Part
+-- Skywalk
 local skywalkConn, skywalkPart = nil, nil
 addToggleBtn(PlayersScroll, "☁️ Skywalk / AirWalk", false, function(enabled)
     isSkywalkActive = enabled
@@ -663,7 +689,6 @@ addToggleBtn(PlayersScroll, "☁️ Skywalk / AirWalk", false, function(enabled)
         skywalkPart.Color = currentTheme.Accent
         skywalkPart.Parent = workspace
 
-        -- Đưa nhân vật lên đúng độ cao Offset Y ban đầu nếu có
         if lastSkywalkOffset ~= 0 and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
             local hrp = LocalPlayer.Character.HumanoidRootPart
             hrp.CFrame = hrp.CFrame + Vector3.new(0, lastSkywalkOffset, 0)
@@ -793,7 +818,7 @@ addToggleBtn(SettingsScroll, "🚫 Anti Kick Protection", Config.AntiKick, funct
     showNotification("Anti Kick", enabled and "Anti-Kick Protection Enabled" or "Anti-Kick Disabled", 3)
 end)
 
--- Server Hop Nút
+-- Server Hop
 local ServerHopBtn = I("TextButton", SettingsScroll, {
     Size = UDim2.new(1, -6, 0, 28), BackgroundColor3 = currentTheme.Card, BackgroundTransparency = 0.2,
     Text = "🌐 Server Hop (Đổi Server Khác)", TextColor3 = currentTheme.Text, Font = Enum.Font.SourceSansBold, TextSize = 12, ZIndex = 13
@@ -815,7 +840,7 @@ ServerHopBtn.MouseButton1Click:Connect(function()
     end)
 end)
 
--- FPS Boost Nút
+-- FPS Boost
 local FpsBoostBtn = I("TextButton", SettingsScroll, {
     Size = UDim2.new(1, -6, 0, 28), BackgroundColor3 = currentTheme.Card, BackgroundTransparency = 0.2,
     Text = "🚀 Enable FPS Boost / Anti Lag", TextColor3 = currentTheme.Text, Font = Enum.Font.SourceSansBold, TextSize = 12, ZIndex = 13
@@ -839,7 +864,7 @@ FpsBoostBtn.MouseButton1Click:Connect(function()
     showNotification("FPS Boost", "Đã tối ưu hóa đồ họa & tăng FPS thành công!", 3)
 end)
 
--- Destroy GUI Nút
+-- Destroy GUI
 local DestroyGuiBtn = I("TextButton", SettingsScroll, {
     Size = UDim2.new(1, -6, 0, 28), BackgroundColor3 = Color3.fromRGB(220, 40, 60), BackgroundTransparency = 0.1,
     Text = "🗑️ Destroy GUI / Unload Hub", TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.SourceSansBold, TextSize = 12, ZIndex = 13
@@ -857,7 +882,7 @@ local InfoScrollPage = I("ScrollingFrame", InfoPage, {
 
 I("TextLabel", InfoScrollPage, {
     Size = UDim2.new(1, -10, 0, 95), Position = UDim2.new(0, 5, 0, 0), BackgroundTransparency = 1,
-    Text = "⚡ NANESK HUB v" .. SCRIPT_VERSION .. "\n\n• Developer: Nanesk\n• Real-Time Dynamic Skywalk Elevation Fix\n• Server Hop Integrated\n• Complete Clean Unload & Destroy System",
+    Text = "⚡ NANESK HUB v" .. SCRIPT_VERSION .. "\n\n• Developer: Nanesk\n• Real-Time Dynamic Skywalk Elevation Fix\n• Full Script Details (Key Status, Level, Features)\n• Clean Unload & Destroy System",
     TextColor3 = Color3.fromRGB(220, 235, 255), Font = Enum.Font.SourceSansBold, TextSize = 12, TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 13
 })
 
@@ -876,5 +901,5 @@ DiscordBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-showNotification("Nanesk Hub", "Loaded Version " .. SCRIPT_VERSION .. " (Skywalk Offset Fix Applied)", 4)
+showNotification("Nanesk Hub", "Loaded Version " .. SCRIPT_VERSION .. " (Script Details Added)", 4)
  
